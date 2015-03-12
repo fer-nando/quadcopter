@@ -307,6 +307,11 @@ void SendRawData() {
   tmp[7] = (int16_t)(magValue[1]  * 10.0);
   tmp[8] = (int16_t)(magValue[2]  * 10.0);
 
+  tmp[9] = (int16_t)(roll * 100.0);
+  tmp[10] = (int16_t)(pitch * 100.0);
+  tmp[11] = (int16_t)(yaw * 100.0);
+  tmp[12] = (int16_t)(altitude * 100.0);
+
   rf24Send(buffer, PAYLOAD_SIZE);
 }
 
@@ -504,15 +509,19 @@ void main(void) {
     }
   }
 
-  uartTime = rcTime = micros();
+  previousTime = uartTime = rcTime = micros();
   armed = false;
   rf_state = RF_LISTENING;
+
+  int cycleCounter = 0;
+  int rfTryCounter = 0;
+  uint64_t lastTxCounter = 0;
 
   // loop forever
   while (1) {
 
     currentTime = micros();
-    cycleTime = currentTime - previousTime;
+    //cycleTime = currentTime - previousTime;
 
     if (I2CGetErrorsCount() > 0)
       ledOn(RED_LED);
@@ -521,6 +530,39 @@ void main(void) {
       rf24StartListening();
       rf_state = RF_LISTENING;
     }
+
+    if (currentTime - previousTime >= SAMPLE_TIME_US) { // 400 Hz
+      SensorsUpdate();
+      AttitudeEstimation(&roll, &rollRate, &pitch, &pitchRate, &yaw, &altitude);
+      previousTime = currentTime;
+      cycleCounter++;
+
+    }
+
+    if (currentTime - rcTime >= MOTOR_TIME_US) {
+      if (rf_state != RF_SENDING) {
+        SendRawData();
+        rf_state = RF_SENDING;
+        rfTryCounter++;
+      }
+      rcTime = currentTime;
+    }
+
+    if(currentTime - uartTime >= 4000000) {
+      unsigned long rfSentCounter = rf24GetTxCounter() - lastTxCounter;
+      lastTxCounter = rf24GetTxCounter();
+      unsigned long meanCycleTime = (unsigned long)(4000000 / cycleCounter);
+      unsigned long meanCycleRate = (unsigned long)(cycleCounter >> 2);
+      unsigned long meanSendTime = (unsigned long)(4000000 / rfSentCounter);
+      unsigned long meanSendRate = (unsigned long)(rfSentCounter >> 2);
+      unsigned long failRate = 1000 - rfSentCounter * 1000 / rfTryCounter;
+      UARTprintf("Cycle: time = %d us, rate = %d Hz\n", meanCycleTime, meanCycleRate);
+      UARTprintf("Send: time = %d us, rate = %d Hz, fail = %d %%o\n", meanSendTime, meanSendRate, failRate);
+      cycleCounter = 0;
+      rfTryCounter = 0;
+      uartTime = currentTime;
+    }
+
 
     if (rf24Available()) {
       rf24Receive(buffer, PAYLOAD_SIZE);
@@ -542,14 +584,10 @@ void main(void) {
       snprintf(str[2], 10, "%2.3f", config.Ki[PIDPITCH]);
       UARTprintf("\tPID ROLL+PITCH: Kp = %s, Kd = %s, Ki = %s\n", str[0], str[1], str[2]);
 #endif
-      if(buffer[8] == 1) {
-        WriteConfig();
-      }
-      if(buffer[9] == 1) {
-        LoadDefaults();
-        WriteConfig();
-      }
+
+      WriteConfig();
     }
+    /*
 
     if (currentTime - previousTime >= SAMPLE_TIME_US) { // 400 Hz
       SensorsUpdate();
@@ -619,6 +657,8 @@ void main(void) {
       uartTime = currentTime;
     }
 #endif
+
+*/
 
   }
 
