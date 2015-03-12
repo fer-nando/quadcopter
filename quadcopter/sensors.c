@@ -24,6 +24,9 @@ float     gyroValue[3], accValue[3], magValue[3];
 float     gyroVar, accVar;
 State     state[2];
 
+float     gff[3][3], aff[3][3];
+float     gfb[3][3], afb[3][3];
+
 
 //*****************************************************************************
 //
@@ -46,6 +49,41 @@ void SensorsInit(int flags) {
   KalmanInit();
 }
 
+
+//*****************************************************************************
+//
+// Sensors Low Pass Filter
+//
+// 50 Hz:
+// b = [ 0.0902,  0.1804,  0.0902]
+// a = [ 1.0000, -0.9895,  0.3503]
+//
+//*****************************************************************************
+void SensorsLowPassFilter() {
+  int i, j;
+  // swift previous data
+  for (i = 0; i < 3; i++) {
+    for (j = 1; j < 3; j++) {
+      gff[i][j] = gff[i][j-1];
+      gfb[i][j] = gfb[i][j-1];
+      aff[i][j] = aff[i][j-1];
+      afb[i][j] = afb[i][j-1];
+    }
+  }
+  // apply low pass filter
+  for (i = 0; i < 3; i++) {
+    gff[i][0] = gyroValue[i];
+    gfb[i][0] = 0.0902*gff[i][0] + 0.1804*gff[i][1] + 0.0902*gff[i][2]
+                                 + 0.9895*gfb[i][1] - 0.3503*gfb[i][2];
+    gyroValue[i] = gfb[i][0];
+    aff[i][0] = accValue[i];
+    afb[i][0] = 0.0902*aff[i][0] + 0.1804*aff[i][1] + 0.0902*aff[i][2]
+                                 + 0.9895*afb[i][1] - 0.3503*afb[i][2];
+    accValue[i] = afb[i][0];
+
+  }
+}
+
 //*****************************************************************************
 //
 // Sensors update
@@ -56,6 +94,8 @@ void SensorsUpdate() {
   ADXL345_Update(accValue);    // 400Hz
   HMC5883_Update(magValue);    // 15Hz
   BMP085_Update(&pressure, &temperature);     // ~40Hz
+
+  SensorsLowPassFilter();
 }
 
 //*****************************************************************************
@@ -85,7 +125,7 @@ void SensorsGetCalibration(int * accZero, int * magZero) {
 //*****************************************************************************
 void KalmanInit() {
   // Process noise variance
-  const float PNstd = 0.015;
+  const float PNstd = 0.05;
   const float PNV = PNstd*PNstd;
   // Measurement noise variance
   const float accMNV = ACC_SCALE*ACC_SCALE*100;
