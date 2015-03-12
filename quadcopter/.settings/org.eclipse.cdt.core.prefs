@@ -1,0 +1,11 @@
+eclipse.preferences.version=1
+environment/project/com.ti.ccstudio.buildDefinitions.TMS470.Debug.1182492884/SW_ROOT/delimiter=;
+environment/project/com.ti.ccstudio.buildDefinitions.TMS470.Debug.1182492884/SW_ROOT/operation=append
+environment/project/com.ti.ccstudio.buildDefinitions.TMS470.Debug.1182492884/SW_ROOT/value=C\:\\StellarisWare
+environment/project/com.ti.ccstudio.buildDefinitions.TMS470.Debug.1182492884/append=true
+environment/project/com.ti.ccstudio.buildDefinitions.TMS470.Debug.1182492884/appendContributed=true
+environment/project/com.ti.ccstudio.buildDefinitions.TMS470.Release.1115171033/SW_ROOT/delimiter=;
+environment/project/com.ti.ccstudio.buildDefinitions.TMS470.Release.1115171033/SW_ROOT/operation=append
+environment/project/com.ti.ccstudio.buildDefinitions.TMS470.Release.1115171033/SW_ROOT/value=C\:\\StellarisWare
+environment/project/com.ti.ccstudio.buildDefinitions.TMS470.Release.1115171033/append=true
+environment/project/com.ti.ccstudio.buildDefinitions.TMS470.Release.1115171033/appendContributed=true

@@ -1,0 +1,1 @@
+"../sensors/ADXL345.c" "../sensors/BMP085.c" "../sensors/HC_SR04.c" "../sensors/HMC5883.c" "../sensors/L3G4200D.c" 
