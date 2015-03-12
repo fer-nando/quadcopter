@@ -4,14 +4,16 @@
 
 
 #include <stdint.h>
+#include "nRF24L01.h"
 
 
 #define RF_SENT         0
 #define RF_SENDING      1
 #define RF_SEND_FAIL    2
 #define RF_LISTENING    3
+#define RF_FIFO_FULL    (1<<FIFO_FULL)
 
-#define PAYLOAD_SIZE    19
+#define PAYLOAD_SIZE    27
 
 #define PIN_CE_BASE 	  GPIO_PORTA_BASE
 #define PIN_CSN_BASE    GPIO_PORTA_BASE
@@ -33,8 +35,10 @@ void rf24ReadPayload(uint8_t *payload, uint8_t len);
 void rf24FlushTX(void);
 void rf24FlushRX(void);
 uint8_t rf24GetStatus(void);
+uint8_t rf24GetFIFOStatus(void);
 uint8_t rf24Busy(void);
 uint8_t rf24Available(void);
+uint64_t rf24GetTxCounter(void);
 void rf24Send(uint8_t *payload, uint8_t len);
 void rf24Receive(uint8_t *payload, uint8_t len);
 void rf24StartListening(void);

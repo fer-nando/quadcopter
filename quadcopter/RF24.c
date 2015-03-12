@@ -5,7 +5,6 @@
 #include "driverlib/pin_map.h"
 #include "driverlib/interrupt.h"
 #include "utils/uartstdio.h"
-#include "nRF24L01.h"
 #include "RF24.h"
 #include "utils/delay.h"
 #include "utils/spi_functions.h"
@@ -18,6 +17,8 @@ const uint8_t regCount = 10;
 const char *addrList[] = { "RX_ADDR_P0", "TX_ADDR" };
 const uint8_t addrNum[] = { RX_ADDR_P0, TX_ADDR };
 const uint8_t addrCount = 2;
+
+volatile uint64_t txCounter;
 
 volatile uint8_t txOK;
 volatile uint8_t rxOK;
@@ -93,6 +94,20 @@ uint8_t rf24GetStatus(void) {
 
 /****************************************************************************/
 
+uint8_t rf24GetFIFOStatus(void) {
+  uint8_t status;
+  rf24ReadReg(FIFO_STATUS, &status, 1);
+  return status;
+}
+
+/****************************************************************************/
+
+uint64_t rf24GetTxCounter(void) {
+  return txCounter;
+}
+
+/****************************************************************************/
+
 uint8_t rf24Busy(void) {
   if (txOK) {
     return 0;
@@ -116,12 +131,12 @@ void rf24Send(uint8_t *payload, uint8_t len) {
   rf24WritePayload(payload, len);
 
   txOK = 0;
-  rxOK = 0;
+  //rxOK = 0;
   rtOK = 1;
 
   ce(PIN_CE);
-  //DelayUs(15);
-  //ce(0);
+  DelayUs(15);
+  ce(0);
 
   /*
   // Aguarda envio
@@ -226,6 +241,7 @@ void rf24Init(void) {
   rxOK = 0;
   txOK = 0;
   rtOK = 1;
+  txCounter = 0;
 }
 
 //*****************************************************************************
@@ -254,9 +270,9 @@ void rf24Setup(uint64_t addr) {
   rf24WriteReg(RF_CH, &buf, 1);
 
   // config. rf
-  // data rate = 1Mbps, power = 0dBm
+  // data rate = 2Mbps, power = 0dBm
   // ganho LNA = ativado (economiza 0.8mA no modo RX, com perda de 1.5dB)
-  buf = ~(1 << RF_DR) & ((0x03 << RF_PWR) | (1 << LNA_HCURR));
+  buf = (1 << RF_DR) | ((0x03 << RF_PWR) | (1 << LNA_HCURR));
   rf24WriteReg(RF_SETUP, &buf, 1);
 
   // num. de bytes do payload = 8
@@ -277,22 +293,17 @@ void GPIOA_IntHandler(void) {
   if (regVal & PIN_IRQ) {
     status = rf24GetStatus();
 
-    if ((status & (1 << RX_DR)) == (1 << RX_DR))
+    if (status & (1 << RX_DR))
       rxOK = 1;
-    if ((status & (1 << TX_DS)) == (1 << TX_DS))
+    if (status & (1 << TX_DS)) {
       txOK = 1;
-    if ((status & (1 << MAX_RT)) == (1 << MAX_RT))
+      txCounter++;
+    }
+    if (status & (1 << MAX_RT))
       rtOK = 0;
 
     buf = status | 0x70;
     rf24WriteReg(STATUS, &buf, 1);
-
-    rf24ReadReg(FIFO_STATUS, &buf, 1);
-    if (buf & (1 << TX_EMPTY)) {
-      ce(0);
-    } else {
-      txOK = 0;
-    }
 
     //UARTprintf("  PA7 is low\n");
 
