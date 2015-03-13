@@ -44,8 +44,8 @@
 
 #define PID_CONTROLS     1
 #define PID_I_LIMIT      10.0
-#define MOTOR_FREQUENCY  100      // 100 Hz
-#define MOTOR_TIME_US    10000    // 10,000 us = 10 ms
+#define MOTOR_FREQUENCY  400      // 100 Hz
+#define MOTOR_TIME_US    2500    // 10,000 us = 10 ms
 
 #define RED_LED          GPIO_PIN_1
 #define BLUE_LED         GPIO_PIN_2
@@ -233,7 +233,7 @@ void AttitudeControl() {
    *         2            3   2
    */
 
-  if(rc[THROTTLE] > 1200) {
+  if(rc[THROTTLE] > 1100) {
     throttle = (float)(rc[THROTTLE] - 1000) / 10.0;
     mtr[0] = throttle + pid[PIDPITCH];
     mtr[1] = throttle - pid[PIDROLL];
@@ -259,6 +259,8 @@ void AttitudeControl() {
 
 
 int SendPID() {
+  uint64_t startTime;
+  const uint64_t timeout = 50000; // 50 ms
   int16_t * tmp = (int16_t *)(buffer+1);
 
   rf24StopListening();
@@ -270,7 +272,9 @@ int SendPID() {
 
   rf24Send(buffer, PAYLOAD_SIZE);
 
-  while (rf24Busy() == RF_SENDING)
+  startTime = micros();
+
+  while ((rf24Busy() == RF_SENDING) && (micros() - startTime < timeout))
     DelayMs(1);
 
   return rf24Busy();
@@ -492,19 +496,23 @@ void main(void) {
   // Start listening
   rf24StartListening();
 
+
   ledOff(GREEN_LED);
 
 #ifdef SERIAL_DEBUG
   UARTprintf("End of initializations.\n\n");
 #endif
 
-  // if bad I2C communication, blink the red led and stop, until a button is
-  // pressed
-  if (I2CGetErrorsCount() > 0 || rf_state == RF_SEND_FAIL) {
+  // if bad I2C communication, blink the red led
+  // if rf sent failed, blink the green led
+  // continue if both buttons are pressed
+  if (I2CGetErrorsCount() > 0 || rf_state != RF_SENT) {
+    int leds = (I2CGetErrorsCount() > 0) ? RED_LED : 0;
+    leds += (rf_state != RF_SENT) ? GREEN_LED : 0;
     while (readButton(ALL_BUTTONS)) {
-      ledOn(RED_LED);
+      ledOn(leds);
       DelayMs(250);
-      ledOff(RED_LED);
+      ledOff(leds);
       DelayMs(250);
     }
   }
@@ -513,9 +521,11 @@ void main(void) {
   armed = false;
   rf_state = RF_LISTENING;
 
+  /*
   int cycleCounter = 0;
   int rfTryCounter = 0;
   uint64_t lastTxCounter = 0;
+  */
 
   // loop forever
   while (1) {
@@ -531,6 +541,7 @@ void main(void) {
       rf_state = RF_LISTENING;
     }
 
+    /*
     if (currentTime - previousTime >= SAMPLE_TIME_US) { // 400 Hz
       SensorsUpdate();
       AttitudeEstimation(&roll, &rollRate, &pitch, &pitchRate, &yaw, &altitude);
@@ -562,7 +573,7 @@ void main(void) {
       rfTryCounter = 0;
       uartTime = currentTime;
     }
-
+    */
 
     if (rf24Available()) {
       rf24Receive(buffer, PAYLOAD_SIZE);
@@ -584,10 +595,9 @@ void main(void) {
       snprintf(str[2], 10, "%2.3f", config.Ki[PIDPITCH]);
       UARTprintf("\tPID ROLL+PITCH: Kp = %s, Kd = %s, Ki = %s\n", str[0], str[1], str[2]);
 #endif
-
       WriteConfig();
     }
-    /*
+
 
     if (currentTime - previousTime >= SAMPLE_TIME_US) { // 400 Hz
       SensorsUpdate();
@@ -617,13 +627,12 @@ void main(void) {
         MotorSetDutyCycle(mtr);
 #ifdef RADIO_LOG
         if (rf_state != RF_SENDING) {
-          SendState();
+          //SendState();
           SendRawData();
           rf_state = RF_SENDING;
         }
 #endif
       }
-
       rcTime = currentTime;
     }
 
@@ -658,7 +667,6 @@ void main(void) {
     }
 #endif
 
-*/
 
   }
 
