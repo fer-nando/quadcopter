@@ -81,18 +81,7 @@ void GPIOC_IntHandler(void) {
   valueGPIOc = GPIOPinRead(GPIO_PORTC_BASE, 0xFF);
   intGPIOc = GPIOPinIntStatus(GPIO_PORTC_BASE, true);
 
-  //RCCheck(0, GPIO_PIN_4);
-  if (intGPIOc & GPIO_PIN_4) {
-    if (valueGPIOc & GPIO_PIN_4) {
-      rcEdgeTime[0] = currTime;
-    } else {
-      diffTime = currTime - rcEdgeTime[0];
-      if (800 < diffTime && diffTime < 2200) {
-        rcValue[0] = diffTime;
-      }
-    }
-    GPIOPinIntClear(GPIO_PORTC_BASE, GPIO_PIN_4);
-  }
+  RCCheck(0, GPIO_PIN_4);
   RCCheck(1, GPIO_PIN_5);
   RCCheck(2, GPIO_PIN_7);
   RCCheck(3, GPIO_PIN_6);
