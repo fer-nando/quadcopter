@@ -37,15 +37,15 @@
 
 
 
-//#define SERIAL_DEBUG
+#define SERIAL_DEBUG
 #define RADIO_LOG
 //#define ESC_CALIBRATION
 
 
-#define PID_CONTROLS     1
-#define PID_I_LIMIT      10.0
-#define MOTOR_FREQUENCY  400      // 100 Hz
-#define MOTOR_TIME_US    2500    // 10,000 us = 10 ms
+#define PID_I_LIMIT      5.0
+#define MOTOR_FREQUENCY  400      // 400 Hz
+#define MOTOR_TIME_US    2500     // 2,500 us = 2.5 ms
+#define LOG_TIME_US      10000    // 10,000 us = 10 ms
 
 #define RED_LED          GPIO_PIN_1
 #define BLUE_LED         GPIO_PIN_2
@@ -136,8 +136,8 @@ int CalculateChecksum(uint32_t * p, int size) {
 void LoadDefaults() {
   config.defaults = true;
 
-  config.Kp[PIDROLL]  = 0.2;  config.Ki[PIDROLL]  = 0.01;  config.Kd[PIDROLL]  = 0.1;
-  config.Kp[PIDPITCH] = 0.2;  config.Ki[PIDPITCH] = 0.01;  config.Kd[PIDPITCH] = 0.1;
+  config.Kp[PIDROLL]  = 0.15;  config.Ki[PIDROLL]  = 0.001;  config.Kd[PIDROLL]  = 0.05;
+  config.Kp[PIDPITCH] = 0.15;  config.Ki[PIDPITCH] = 0.001;  config.Kd[PIDPITCH] = 0.05;
   config.Kp[PIDYAW]   = 0.0;  config.Ki[PIDYAW]   = 0.0;  config.Kd[PIDYAW] = 0.0;
   config.Kp[PIDALT]   = 0.0;  config.Ki[PIDALT]   = 0.0;  config.Kd[PIDALT] = 0.0;
 
@@ -193,25 +193,9 @@ void AttitudeControl() {
   float error, errorDiff;
   float pid[PIDCONTROLS];
 
-  // ROLL PID
-  error = -roll;
-  errorDiff = (error - lastError[PIDROLL]); // pitchRate
-  lastError[PIDROLL] = error;
-  errorSum[PIDROLL] += error * config.Ki[PIDROLL];
-
-  if(errorSum[PIDROLL] > PID_I_LIMIT) {
-    errorSum[PIDROLL] = PID_I_LIMIT;
-  } else if (errorSum[PIDROLL] < -PID_I_LIMIT) {
-    errorSum[PIDROLL] = -PID_I_LIMIT;
-  }
-
-  pid[PIDROLL] = config.Kp[PIDROLL]*error
-                + config.Kd[PIDROLL]*errorDiff
-                + errorSum[PIDROLL];
-
   // PITCH PID
-  error = -pitch;
-  errorDiff = (error - lastError[PIDPITCH]); // pitchRate
+  error = pitch;
+  errorDiff = -pitchRate;//(error - lastError[PIDPITCH]); // pitchRate
   lastError[PIDPITCH] = error;
   errorSum[PIDPITCH] += error * config.Ki[PIDPITCH];
 
@@ -225,20 +209,36 @@ void AttitudeControl() {
                 + config.Kd[PIDPITCH]*errorDiff
                 + errorSum[PIDPITCH];
 
-  /*         0
-   *         ^ x          0   1
-   *     y   |             \ /       frente: x < 0 , y > 0
-   *   3 <---+--- 1         X        tras:   x > 0 , y < 0
-   *         |             / \
-   *         2            3   2
+  // ROLL PID
+  error = roll;
+  errorDiff = -rollRate;//(error - lastError[PIDROLL]); // rollRate
+  lastError[PIDROLL] = error;
+  errorSum[PIDROLL] += error * config.Ki[PIDROLL];
+
+  if(errorSum[PIDROLL] > PID_I_LIMIT) {
+    errorSum[PIDROLL] = PID_I_LIMIT;
+  } else if (errorSum[PIDROLL] < -PID_I_LIMIT) {
+    errorSum[PIDROLL] = -PID_I_LIMIT;
+  }
+
+  pid[PIDROLL] = config.Kp[PIDROLL]*error
+                + config.Kd[PIDROLL]*errorDiff
+                + errorSum[PIDROLL];
+
+  /*         [0 1]
+   *           ^ x              0   1
+   *       y   |                 \ /       frente:   pitch/rate > 0
+   * [0 3] <---+--- [1 2]         X        tras:     pitch/rate < 0
+   *           |                 / \       esquerda: roll/rate  > 0
+   *         [2 3]              3   2      direita:  roll/rate  < 0
    */
 
   if(rc[THROTTLE] > 1100) {
     throttle = (float)(rc[THROTTLE] - 1000) / 10.0;
-    mtr[0] = throttle + pid[PIDPITCH];
-    mtr[1] = throttle - pid[PIDROLL];
-    mtr[2] = throttle - pid[PIDPITCH];
-    mtr[3] = throttle + pid[PIDROLL];
+    mtr[0] = throttle + pid[PIDPITCH];// + pid[PIDROLL];
+    mtr[1] = throttle + pid[PIDPITCH];// - pid[PIDROLL];
+    mtr[2] = throttle - pid[PIDPITCH];// - pid[PIDROLL];
+    mtr[3] = throttle - pid[PIDPITCH];// + pid[PIDROLL];
   } else {
     mtr[0] = 0.0;
     mtr[1] = 0.0;
@@ -266,9 +266,9 @@ int SendPID() {
   rf24StopListening();
 
   buffer[0] = 'P';
-  tmp[0] = (int16_t)(config.Kp[PIDPITCH] * 1000.0);
-  tmp[1] = (int16_t)(config.Kd[PIDPITCH] * 1000.0);
-  tmp[2] = (int16_t)(config.Ki[PIDPITCH] * 1000.0);
+  tmp[0] = (int16_t)(config.Kp[PIDPITCH] * 100.0);
+  tmp[1] = (int16_t)(config.Kd[PIDPITCH] * 100.0);
+  tmp[2] = (int16_t)(config.Ki[PIDPITCH] * 10000.0);
 
   rf24Send(buffer, PAYLOAD_SIZE);
 
@@ -286,8 +286,8 @@ void SendState() {
   rf24StopListening();
 
   buffer[0] = 'S';
-  tmp[0] = (int16_t)(roll * 100.0);
-  tmp[1] = (int16_t)(pitch * 100.0);
+  tmp[0] = (int16_t)(pitch * 100.0);
+  tmp[1] = (int16_t)(roll * 100.0);
   tmp[2] = (int16_t)(yaw * 100.0);
   tmp[3] = (int16_t)(altitude * 100.0);
 
@@ -307,12 +307,12 @@ void SendRawData() {
   tmp[3] = (int16_t)(accValue[0]  * 1000.0);
   tmp[4] = (int16_t)(accValue[1]  * 1000.0);
   tmp[5] = (int16_t)(accValue[2]  * 1000.0);
-  tmp[6] = (int16_t)(magValue[0]  * 10.0);
-  tmp[7] = (int16_t)(magValue[1]  * 10.0);
-  tmp[8] = (int16_t)(magValue[2]  * 10.0);
+  tmp[6] = (int16_t)(rc[0]);
+  tmp[7] = (int16_t)(rc[1]);
+  tmp[8] = (int16_t)(rc[3]);
 
-  tmp[9] = (int16_t)(roll * 100.0);
-  tmp[10] = (int16_t)(pitch * 100.0);
+  tmp[9] = (int16_t)(pitch * 100.0);
+  tmp[10] = (int16_t)(roll * 100.0);
   tmp[11] = (int16_t)(yaw * 100.0);
   tmp[12] = (int16_t)(altitude * 100.0);
 
@@ -536,7 +536,7 @@ void main(void) {
     if (I2CGetErrorsCount() > 0)
       ledOn(RED_LED);
 
-    if (rf_state == RF_SENDING && rf24Busy() == RF_SENT) {
+    if (rf_state == RF_SENDING && rf24Busy() != RF_SENDING) {
       rf24StartListening();
       rf_state = RF_LISTENING;
     }
@@ -583,12 +583,12 @@ void main(void) {
           ((int16_t *)buffer)[1], ((int16_t *)buffer)[2], ((int16_t *)buffer)[3],
           buffer[8], buffer[9]);
 #endif
-      config.Kp[PIDROLL] = ((int16_t *)buffer)[0] / 1000.0;
-      config.Kd[PIDROLL] = ((int16_t *)buffer)[1] / 1000.0;
-      config.Ki[PIDROLL] = ((int16_t *)buffer)[2] / 1000.0;
-      config.Kp[PIDPITCH] = ((int16_t *)buffer)[0] / 1000.0;
-      config.Kd[PIDPITCH] = ((int16_t *)buffer)[1] / 1000.0;
-      config.Ki[PIDPITCH] = ((int16_t *)buffer)[2] / 1000.0;
+      config.Kp[PIDROLL] = ((int16_t *)buffer)[0] / 100.0;
+      config.Kd[PIDROLL] = ((int16_t *)buffer)[1] / 100.0;
+      config.Ki[PIDROLL] = ((int16_t *)buffer)[2] / 10000.0;
+      config.Kp[PIDPITCH] = ((int16_t *)buffer)[0] / 100.0;
+      config.Kd[PIDPITCH] = ((int16_t *)buffer)[1] / 100.0;
+      config.Ki[PIDPITCH] = ((int16_t *)buffer)[2] / 10000.0;
 #ifdef SERIAL_DEBUG
       snprintf(str[0], 10, "%2.3f", config.Kp[PIDPITCH]);
       snprintf(str[1], 10, "%2.3f", config.Kd[PIDPITCH]);
@@ -601,7 +601,7 @@ void main(void) {
 
     if (currentTime - previousTime >= SAMPLE_TIME_US) { // 400 Hz
       SensorsUpdate();
-      AttitudeEstimation(&roll, &rollRate, &pitch, &pitchRate, &yaw, &altitude);
+      AttitudeEstimation(&pitch, &pitchRate, &roll, &rollRate, &yaw, &altitude);
       previousTime = currentTime;
     }
 
@@ -626,10 +626,11 @@ void main(void) {
         AttitudeControl();
         MotorSetDutyCycle(mtr);
 #ifdef RADIO_LOG
-        if (rf_state != RF_SENDING) {
+        if (rf_state != RF_SENDING && currentTime - uartTime >= LOG_TIME_US) {
           //SendState();
           SendRawData();
           rf_state = RF_SENDING;
+          uartTime = currentTime;
         }
 #endif
       }
@@ -660,7 +661,7 @@ void main(void) {
           rc[3]);
       UARTprintf("Motors out: 1:%s%%, 2:%s%%, 3:%s%%, 4:%s%%\n", str[4], str[5], str[6],
           str[7]);
-      UARTprintf("Motors out: load:%u, match:%u\n", loadValue, matchValue);
+      UARTprintf("RF tx: %u\n", (unsigned long)rf24GetTxCounter());
       UARTprintf("\n");
 
       uartTime = currentTime;
