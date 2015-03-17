@@ -15,8 +15,11 @@
 #include "rc.h"
 
 
-volatile unsigned int rcValue[] = { 0, 0, 0, 0 };       // value of the rc input
-volatile unsigned long rcEdgeTime[] = { 0, 0, 0, 0 };   // rising time
+volatile int      rcValue[4] = { 0, 0, 0, 0 };      // value of the rc input
+volatile uint64_t rcEdgeTime[4] = { 0, 0, 0, 0 };   // rising time
+volatile tBoolean rcUpdated[4] = { false, false, false, false };
+
+int rcff[4][3], rcfb[4][3];
 
 
 //*****************************************************************************
@@ -42,16 +45,36 @@ void RCInit() {
   IntEnable(INT_GPIOC);
 }
 
+void RCLowPassFilter(int num) {
+  int i;
+  int * x = rcff[num];
+  int * y = rcfb[num];
+  // swift previous data
+  for (i = 2; i > 0; i--) {
+    x[i] = x[i-1];
+    y[i] = y[i-1];
+  }
+  // apply 5Hz low pass filter
+  x[0] = rcValue[num];
+  y[0] = 0.1729*x[0] + 0.3458*x[1] + 0.1729*x[2]
+                     + 0.5301*y[1] - 0.2217*y[2];
+  rcValue[num] = y[0];
+}
+
 //*****************************************************************************
 //
 //
 //
 //*****************************************************************************
 void RCGetValues(int * rc) {
-  rc[0] = rcValue[0];
-  rc[1] = rcValue[1];
-  rc[2] = rcValue[2];
-  rc[3] = rcValue[3];
+  int i;
+  for (i = 0; i < 4; i++) {
+    if (rcUpdated[i]) {
+      rcUpdated[i] = false;
+      RCLowPassFilter(i);
+    }
+    rc[i] = rcValue[i];
+  }
 }
 
 
@@ -68,14 +91,15 @@ void RCGetValues(int * rc) {
         diffTime = currTime - rcEdgeTime[num];    \
         if (800 < diffTime && diffTime < 2200) {  \
           rcValue[num] = diffTime;                \
+          rcUpdated[num] = true;                  \
         }                                         \
       }                                           \
       GPIOPinIntClear(GPIO_PORTC_BASE, pin);      \
     }
 
 void GPIOC_IntHandler(void) {
-  unsigned int valueGPIOc, intGPIOc;
-  unsigned long currTime, diffTime;
+  unsigned long valueGPIOc, intGPIOc;
+  uint64_t currTime, diffTime;
 
   currTime = micros();
   valueGPIOc = GPIOPinRead(GPIO_PORTC_BASE, 0xFF);

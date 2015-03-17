@@ -12,6 +12,7 @@
 // functions
 void RCInit();
 void RCGetValues(int * rc);
+void RCLowPassFilter(int num);
 
 
 #endif /* RC_H_ */

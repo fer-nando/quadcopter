@@ -67,7 +67,7 @@ void SensorsLowPassFilter() {
   int i, j;
   // swift previous data
   for (i = 0; i < 3; i++) {
-    for (j = 1; j < 3; j++) {
+    for (j = 2; j > 0; j--) {
       gff[i][j] = gff[i][j-1];
       gfb[i][j] = gfb[i][j-1];
       aff[i][j] = aff[i][j-1];
@@ -129,7 +129,7 @@ void SensorsGetCalibration(int * accZero, int * magZero) {
 //*****************************************************************************
 void KalmanInit() {
   // Process noise variance
-  const float PNstd = 0.05;
+  const float PNstd = 0.15;
   const float PNV = PNstd*PNstd;
   // Measurement noise variance
   const float accMNV = ACC_SCALE*ACC_SCALE*100;
@@ -205,28 +205,28 @@ void KalmanFilter(State* s) {
 // Estimate the real attitude based
 //
 //*****************************************************************************
-void AttitudeEstimation(float * roll, float * rollRate, float * pitch, float * pitchRate, float * yaw, float * altitude) {
+void AttitudeEstimation(float * pitch, float * pitchRate, float * roll, float * rollRate, float * yaw, float * altitude) {
   // calculate observed angles and rates
-  state[ROLL].z.angle  = rad2deg(atan2(accValue[ROLL] , accValue[YAW]));
-  state[ROLL].z.rate   = gyroValue[ROLL];
-  state[PITCH].z.angle = rad2deg(atan2(accValue[PITCH], accValue[YAW]));
-  state[PITCH].z.rate  = gyroValue[PITCH];
+  state[0].z.angle  = rad2deg(atan2(accValue[0] , accValue[2]));
+  state[0].z.rate   = gyroValue[0];
+  state[1].z.angle = rad2deg(atan2(accValue[1], accValue[2]));
+  state[1].z.rate  = gyroValue[1];
 
   // compute Kalman filter
-  KalmanFilter(&state[ROLL] );
-  KalmanFilter(&state[PITCH]);
+  KalmanFilter(&state[0] );
+  KalmanFilter(&state[1]);
 
   // get predicted angles and rates
-  *roll  = state[ROLL].x.angle;
-  *rollRate = state[ROLL].x.rate;
-  *pitch = state[PITCH].x.angle;
-  *pitchRate = state[PITCH].x.rate;
+  *pitch = state[0].x.angle;
+  *pitchRate = state[0].x.rate;
+  *roll  = state[1].x.angle;
+  *rollRate = state[1].x.rate;
 
 
   // calculate the heading
   *yaw = rad2deg(atan2(magValue[1], magValue[0]));
-  if(*yaw < 0)
-    *yaw += 360;
+  //if(*yaw < 0)
+  //  *yaw += 360;
 
   // calculate the altitude
   *altitude = 44307.694 * (1.0 - pow((double)pressure / DEFAULT_PRESSURE, 0.190284));
