@@ -37,7 +37,7 @@
 
 
 
-#define SERIAL_DEBUG
+//#define SERIAL_DEBUG
 #define RADIO_LOG
 //#define ESC_CALIBRATION
 
@@ -195,9 +195,9 @@ void AttitudeControl() {
 
   // PITCH PID
   error = pitch;
-  errorDiff = -pitchRate;//(error - lastError[PIDPITCH]); // pitchRate
+  errorDiff = pitchRate;//(error - lastError[PIDPITCH]); // pitchRate
   lastError[PIDPITCH] = error;
-  errorSum[PIDPITCH] += error * config.Ki[PIDPITCH];
+  errorSum[PIDPITCH] += pitchRate * config.Ki[PIDPITCH];
 
   if(errorSum[PIDPITCH] > PID_I_LIMIT) {
     errorSum[PIDPITCH] = PID_I_LIMIT;
@@ -211,7 +211,7 @@ void AttitudeControl() {
 
   // ROLL PID
   error = roll;
-  errorDiff = -rollRate;//(error - lastError[PIDROLL]); // rollRate
+  errorDiff = rollRate;//(error - lastError[PIDROLL]); // rollRate
   lastError[PIDROLL] = error;
   errorSum[PIDROLL] += error * config.Ki[PIDROLL];
 
@@ -237,7 +237,7 @@ void AttitudeControl() {
     throttle = (float)(rc[THROTTLE] - 1000) / 10.0;
     mtr[0] = throttle + pid[PIDPITCH];// + pid[PIDROLL];
     mtr[1] = throttle + pid[PIDPITCH];// - pid[PIDROLL];
-    mtr[2] = throttle - pid[PIDPITCH];// - pid[PIDROLL];
+    mtr[2] = .95*throttle - pid[PIDPITCH];// - pid[PIDROLL];
     mtr[3] = throttle - pid[PIDPITCH];// + pid[PIDROLL];
   } else {
     mtr[0] = 0.0;
