@@ -77,12 +77,20 @@ void SensorsLowPassFilter() {
   // apply 25Hz low pass filter
   for (i = 0; i < 3; i++) {
     gff[i][0] = gyroValue[i];
+    aff[i][0] = accValue[i];
+#ifdef LPF_50HZ
+    gfb[i][0] = 0.0902*gff[i][0] + 0.1804*gff[i][1] + 0.0902*gff[i][2]
+                                 + 0.9895*gfb[i][1] - 0.3503*gfb[i][2];
+    afb[i][0] = 0.0902*aff[i][0] + 0.1804*aff[i][1] + 0.0902*aff[i][2]
+                                 + 0.9895*afb[i][1] - 0.3503*afb[i][2];
+#endif
+#ifdef LPF_25HZ
     gfb[i][0] = 0.0293*gff[i][0] + 0.0586*gff[i][1] + 0.0293*gff[i][2]
                                  + 1.4609*gfb[i][1] - 0.5781*gfb[i][2];
-    gyroValue[i] = gfb[i][0];
-    aff[i][0] = accValue[i];
     afb[i][0] = 0.0293*aff[i][0] + 0.0586*aff[i][1] + 0.0293*aff[i][2]
                                  + 1.4609*afb[i][1] - 0.5781*afb[i][2];
+#endif
+    gyroValue[i] = gfb[i][0];
     accValue[i] = afb[i][0];
 
   }
@@ -129,7 +137,7 @@ void SensorsGetCalibration(int * accZero, int * magZero) {
 //*****************************************************************************
 void KalmanInit() {
   // Process noise variance
-  const float PNstd = 0.15;
+  const float PNstd = 0.14;
   const float PNV = PNstd*PNstd;
   // Measurement noise variance
   const float accMNV = ACC_SCALE*ACC_SCALE*100;

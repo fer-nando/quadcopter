@@ -18,6 +18,9 @@ enum rc {
 #define ACC_CALIBRATE               2
 #define MAG_CALIBRATE               4
 
+//#define LPF_50HZ
+#define LPF_25HZ
+
 // structures
 typedef struct Atitude {
   float angle, rate;
