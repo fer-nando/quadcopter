@@ -18,8 +18,12 @@ enum rc {
 #define ACC_CALIBRATE               2
 #define MAG_CALIBRATE               4
 
-//#define LPF_50HZ
-#define LPF_25HZ
+//#define USE_LPF
+  #define LPF_50HZ
+  //#define LPF_25HZ
+
+//#define KALMAN_FILTER
+#define COMPLEMENTARY_FILTER
 
 // structures
 typedef struct Atitude {
@@ -50,6 +54,7 @@ void SensorsSetCalibration(int * accZero, int * magZero);
 void SensorsGetCalibration(int * accZero, int * magZero);
 void KalmanInit();
 void KalmanFilter(State* s);
+void ComplementaryFilter(State* s);
 void AttitudeEstimation(float * roll, float * rollRate, float * pitch, float * pitchRate, float * yaw, float * altitude);
 
 #endif

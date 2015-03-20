@@ -24,8 +24,10 @@ float     gyroValue[3], accValue[3], magValue[3];
 float     gyroVar, accVar;
 State     state[2];
 
+#ifdef USE_LPF
 float     gff[3][3], aff[3][3];
 float     gfb[3][3], afb[3][3];
+#endif
 
 
 //*****************************************************************************
@@ -63,6 +65,7 @@ void SensorsInit(int flags) {
 // a = [ 1.0000, -1.4609,  0.5781]
 //
 //*****************************************************************************
+#ifdef USE_LPF
 void SensorsLowPassFilter() {
   int i, j;
   // swift previous data
@@ -95,6 +98,7 @@ void SensorsLowPassFilter() {
 
   }
 }
+#endif
 
 //*****************************************************************************
 //
@@ -106,8 +110,9 @@ void SensorsUpdate() {
   ADXL345_Update(accValue);    // 400Hz
   HMC5883_Update(magValue);    // 15Hz
   BMP085_Update(&pressure, &temperature);     // ~40Hz
-
+#ifdef USE_LPF
   SensorsLowPassFilter();
+#endif
 }
 
 //*****************************************************************************
@@ -210,6 +215,17 @@ void KalmanFilter(State* s) {
 
 //*****************************************************************************
 //
+// Complementary filter
+//
+//*****************************************************************************
+void ComplementaryFilter(State* s) {
+  a = 0.98;
+  s->x.angle = a*(s->x.angle + s->z.rate*s->dt) + (1-a)*(s->z.angle);
+  s->x.rate  = s->z.rate;
+}
+
+//*****************************************************************************
+//
 // Estimate the real attitude based
 //
 //*****************************************************************************
@@ -220,16 +236,22 @@ void AttitudeEstimation(float * pitch, float * pitchRate, float * roll, float * 
   state[1].z.angle = rad2deg(atan2(accValue[1], accValue[2]));
   state[1].z.rate  = gyroValue[1];
 
+#ifdef KALMAN_FILTER
   // compute Kalman filter
-  KalmanFilter(&state[0] );
+  KalmanFilter(&state[0]);
   KalmanFilter(&state[1]);
+#endif
+#ifdef COMPLEMENTARY_FILTER
+  // compute Complementary filter
+  ComplementaryFilter(&state[0]);
+  ComplementaryFilter(&state[1]);
+#endif
 
   // get predicted angles and rates
   *pitch = state[0].x.angle;
   *pitchRate = state[0].x.rate;
   *roll  = state[1].x.angle;
   *rollRate = state[1].x.rate;
-
 
   // calculate the heading
   *yaw = rad2deg(atan2(magValue[1], magValue[0]));
