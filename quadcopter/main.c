@@ -195,9 +195,9 @@ void AttitudeControl() {
 
   // PITCH PID
   error = pitch;
-  errorDiff = pitchRate;//(error - lastError[PIDPITCH]); // pitchRate
+  errorDiff = pitchRate; //(error - lastError[PIDPITCH]);
   lastError[PIDPITCH] = error;
-  errorSum[PIDPITCH] += pitchRate * config.Ki[PIDPITCH];
+  errorSum[PIDPITCH] += error * config.Ki[PIDPITCH];
 
   if(errorSum[PIDPITCH] > PID_I_LIMIT) {
     errorSum[PIDPITCH] = PID_I_LIMIT;
@@ -211,7 +211,7 @@ void AttitudeControl() {
 
   // ROLL PID
   error = roll;
-  errorDiff = rollRate;//(error - lastError[PIDROLL]); // rollRate
+  errorDiff = rollRate; //(error - lastError[PIDROLL]);
   lastError[PIDROLL] = error;
   errorSum[PIDROLL] += error * config.Ki[PIDROLL];
 
@@ -227,18 +227,18 @@ void AttitudeControl() {
 
   /*         [0 1]
    *           ^ x              0   1
-   *       y   |                 \ /       frente:   pitch/rate > 0
-   * [0 3] <---+--- [1 2]         X        tras:     pitch/rate < 0
-   *           |                 / \       esquerda: roll/rate  > 0
-   *         [2 3]              3   2      direita:  roll/rate  < 0
+   *       y   |                 \ /       forward:   pitch/rate > 0
+   * [0 3] <---+--- [1 2]         X        backward:  pitch/rate < 0
+   *           |                 / \       left:      roll/rate  > 0
+   *         [2 3]              3   2      right:     roll/rate  < 0
    */
 
   if(rc[THROTTLE] > 1100) {
     throttle = (float)(rc[THROTTLE] - 1000) / 10.0;
-    mtr[0] = throttle + pid[PIDPITCH];// + pid[PIDROLL];
-    mtr[1] = throttle + pid[PIDPITCH];// - pid[PIDROLL];
-    mtr[2] = .95*throttle - pid[PIDPITCH];// - pid[PIDROLL];
-    mtr[3] = throttle - pid[PIDPITCH];// + pid[PIDROLL];
+    mtr[0] = throttle + pid[PIDPITCH] + pid[PIDROLL];
+    mtr[1] = throttle + pid[PIDPITCH] - pid[PIDROLL];
+    mtr[2] = throttle - pid[PIDPITCH] - pid[PIDROLL];
+    mtr[3] = throttle - pid[PIDPITCH] + pid[PIDROLL];
   } else {
     mtr[0] = 0.0;
     mtr[1] = 0.0;
@@ -307,9 +307,9 @@ void SendRawData() {
   tmp[3] = (int16_t)(accValue[0]  * 1000.0);
   tmp[4] = (int16_t)(accValue[1]  * 1000.0);
   tmp[5] = (int16_t)(accValue[2]  * 1000.0);
-  tmp[6] = (int16_t)(rc[0]);
-  tmp[7] = (int16_t)(rc[1]);
-  tmp[8] = (int16_t)(rc[3]);
+  tmp[6] = (int16_t)(mtr[0]);
+  tmp[7] = (int16_t)(mtr[1]);
+  tmp[8] = (int16_t)(mtr[2]);
 
   tmp[9] = (int16_t)(pitch * 100.0);
   tmp[10] = (int16_t)(roll * 100.0);

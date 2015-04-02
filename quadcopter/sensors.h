@@ -18,12 +18,29 @@ enum rc {
 #define ACC_CALIBRATE               2
 #define MAG_CALIBRATE               4
 
-//#define USE_LPF
-  #define LPF_50HZ
-  //#define LPF_25HZ
+// Low-pass filter
+#define USE_LPF
+  //#define ACC_LPF_50HZ
+  //#define ACC_LPF_25HZ
+  #define ACC_LPF_15HZ
+  //#define GYRO_LPF_100HZ
+  #define GYRO_LPF_50HZ
+  //#define GYRO_LPF_25HZ
 
-//#define KALMAN_FILTER
-#define COMPLEMENTARY_FILTER
+// Kalman filter
+#define KALMAN_FILTER
+  #define ACC_STD       80
+  #define GYRO_STD      5.21
+  #define PROCESS_STD   0.30
+
+  #define ACC_VAR       (ACC_STD*ACC_STD)
+  #define GYRO_VAR      (GYRO_STD*GYRO_STD)
+  #define PROCESS_VAR   (PROCESS_STD*PROCESS_STD)
+
+// Complementary filter
+//#define COMPLEMENTARY_FILTER
+  #define TAU           0.75
+
 
 // structures
 typedef struct Atitude {
@@ -46,6 +63,7 @@ typedef struct State {
   //float H[4];   // observation matrix
   float K[4];     // kalman gain factor
 } State;
+
 
 // functions
 void SensorsInit(int flags);

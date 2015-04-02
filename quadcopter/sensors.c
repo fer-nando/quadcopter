@@ -48,6 +48,7 @@ void SensorsInit(int flags) {
   if (flags & MAG_CALIBRATE)
     HMC5883_Calibrate();
 
+
   KalmanInit();
 }
 
@@ -56,13 +57,6 @@ void SensorsInit(int flags) {
 //
 // Sensors Low Pass Filter
 //
-// 50 Hz:
-// b = [ 0.0902,  0.1804,  0.0902]
-// a = [ 1.0000, -0.9895,  0.3503]
-//
-// 25 Hz:
-// b = [ 0.0293,  0.0586,  0.0293]
-// a = [ 1.0000, -1.4609,  0.5781]
 //
 //*****************************************************************************
 #ifdef USE_LPF
@@ -79,20 +73,40 @@ void SensorsLowPassFilter() {
   }
   // apply 25Hz low pass filter
   for (i = 0; i < 3; i++) {
+
     gff[i][0] = gyroValue[i];
     aff[i][0] = accValue[i];
-#ifdef LPF_50HZ
-    gfb[i][0] = 0.0902*gff[i][0] + 0.1804*gff[i][1] + 0.0902*gff[i][2]
-                                 + 0.9895*gfb[i][1] - 0.3503*gfb[i][2];
-    afb[i][0] = 0.0902*aff[i][0] + 0.1804*aff[i][1] + 0.0902*aff[i][2]
-                                 + 0.9895*afb[i][1] - 0.3503*afb[i][2];
-#endif
-#ifdef LPF_25HZ
-    gfb[i][0] = 0.0293*gff[i][0] + 0.0586*gff[i][1] + 0.0293*gff[i][2]
-                                 + 1.4609*gfb[i][1] - 0.5781*gfb[i][2];
-    afb[i][0] = 0.0293*aff[i][0] + 0.0586*aff[i][1] + 0.0293*aff[i][2]
-                                 + 1.4609*afb[i][1] - 0.5781*afb[i][2];
-#endif
+
+#ifdef ACC_LPF_50HZ
+    afb[i][0] = 0.09021*aff[i][0] + 0.18041*aff[i][1] + 0.09021*aff[i][2]
+                                  + 0.98947*afb[i][1] - 0.35029*afb[i][2];
+#else  // ACC_LPF != 50HZ
+#ifdef ACC_LPF_25HZ
+    afb[i][0] = 0.02929*aff[i][0] + 0.05858*aff[i][1] + 0.02929*aff[i][2]
+                                  + 1.46091*afb[i][1] - 0.57807*afb[i][2];
+#else  // ACC_LPF != 25Hz
+#ifdef ACC_LPF_15HZ
+    afb[i][0] = 0.01176*aff[i][0] + 0.02351*aff[i][1] + 0.01176*aff[i][2]
+                                  + 1.67070*afb[i][1] - 0.71773*afb[i][2];
+#endif // ACC_LPF_15HZ
+#endif // ACC_LPF_25HZ
+#endif // ACC_LPF_50HZ
+
+#ifdef GYRO_LPF_100HZ
+    gfb[i][0] = 0.22615*gff[i][0] + 0.45231*gff[i][1] + 0.22615*gff[i][2]
+                                  + 0.28095*gfb[i][1] - 0.18556*gfb[i][2];
+#else // GYRO_LPF != 100HZ
+#ifdef GYRO_LPF_50HZ
+    gfb[i][0] = 0.09021*gff[i][0] + 0.18041*gff[i][1] + 0.09021*gff[i][2]
+                                  + 0.98947*gfb[i][1] - 0.35029*gfb[i][2];
+#else // GYRO_LPF != 50HZ
+#ifdef GYRO_LPF_25HZ
+    gfb[i][0] = 0.02929*gff[i][0] + 0.05858*gff[i][1] + 0.02929*gff[i][2]
+                                  + 1.46091*gfb[i][1] - 0.57807*gfb[i][2];
+#endif // GYRO_LPF_25HZ
+#endif // GYRO_LPF_50HZ
+#endif // GYRO_LPF_100HZ
+
     gyroValue[i] = gfb[i][0];
     accValue[i] = afb[i][0];
 
@@ -141,36 +155,29 @@ void SensorsGetCalibration(int * accZero, int * magZero) {
 //
 //*****************************************************************************
 void KalmanInit() {
-  // Process noise variance
-  const float PNstd = 0.14;
-  const float PNV = PNstd*PNstd;
-  // Measurement noise variance
-  const float accMNV = ACC_SCALE*ACC_SCALE*100;
-  const float gyroMNV = GYRO_SCALE*GYRO_SCALE*10;
-
   state[ROLL].x.angle = 0;
   state[ROLL].x.rate  = 0;
   state[ROLL].dt      = SAMPLE_TIME;
-  state[ROLL].Q_angle = PNV;
-  state[ROLL].Q_rate  = PNV;
-  state[ROLL].R_angle = accMNV;
-  state[ROLL].R_rate  = gyroMNV;
-  state[ROLL].P[0]    = accMNV;
+  state[ROLL].Q_angle = PROCESS_VAR;
+  state[ROLL].Q_rate  = PROCESS_VAR;
+  state[ROLL].R_angle = ACC_VAR;
+  state[ROLL].R_rate  = GYRO_VAR;
+  state[ROLL].P[0]    = 1;
   state[ROLL].P[1]    = 0;
   state[ROLL].P[2]    = 0;
-  state[ROLL].P[3]    = gyroMNV;
+  state[ROLL].P[3]    = 1;
 
   state[PITCH].x.angle = 0;
   state[PITCH].x.rate  = 0;
   state[PITCH].dt      = SAMPLE_TIME;
-  state[PITCH].Q_angle = PNV;
-  state[PITCH].Q_rate  = PNV;
-  state[PITCH].R_angle = accMNV;
-  state[PITCH].R_rate  = gyroMNV;
-  state[PITCH].P[0]    = accMNV;
+  state[PITCH].Q_angle = PROCESS_VAR;
+  state[PITCH].Q_rate  = PROCESS_VAR;
+  state[PITCH].R_angle = ACC_VAR;
+  state[PITCH].R_rate  = GYRO_VAR;
+  state[PITCH].P[0]    = 1;
   state[PITCH].P[1]    = 0;
   state[PITCH].P[2]    = 0;
-  state[PITCH].P[3]    = gyroMNV;
+  state[PITCH].P[3]    = 1;
 }
 
 //*****************************************************************************
@@ -178,12 +185,13 @@ void KalmanInit() {
 // Kalman filter
 //
 //*****************************************************************************
+#ifdef KALMAN_FILTER
 void KalmanFilter(State* s) {
-  float Y[4], iY[4], E[2];
+  float Y[4], invY[4], E[2];
 
   // Prediction for state vector and covariance
   // xp = Ax + Bu
-  s->x.angle += s->dt * s->x.rate;
+  s->x.angle += (s->dt * s->x.rate);
   // Pp = APA' + Q
   s->P[0] += s->Q_angle + s->dt * (s->P[1] + s->P[2] + s->dt * s->P[3]);
   s->P[1] += s->dt * s->P[3];
@@ -196,8 +204,8 @@ void KalmanFilter(State* s) {
   Y[1] = s->P[1];
   Y[2] = s->P[2];
   Y[3] = s->R_rate + s->P[3];
-  Inv2(Y, iY);
-  Dot2(s->P, iY, s->K);
+  Inv2(Y, invY);
+  Dot2(s->P, invY, s->K);
 
   // Correction based on observation:
   // x = xp + K(z - Hxp)
@@ -212,17 +220,20 @@ void KalmanFilter(State* s) {
   s->P[2] -= Y[2];
   s->P[3] -= Y[3];
 }
+#endif
 
 //*****************************************************************************
 //
 // Complementary filter
 //
 //*****************************************************************************
+#ifdef COMPLEMENTARY_FILTER
 void ComplementaryFilter(State* s) {
-  a = 0.98;
+  const float a = TAU/(TAU+SAMPLE_TIME);
   s->x.angle = a*(s->x.angle + s->z.rate*s->dt) + (1-a)*(s->z.angle);
   s->x.rate  = s->z.rate;
 }
+#endif
 
 //*****************************************************************************
 //
