@@ -88,6 +88,11 @@ void SensorsLowPassFilter() {
 #ifdef ACC_LPF_15HZ
     afb[i][0] = 0.01176*aff[i][0] + 0.02351*aff[i][1] + 0.01176*aff[i][2]
                                   + 1.67070*afb[i][1] - 0.71773*afb[i][2];
+#else // ACC_LPF != 15HZ
+#ifdef ACC_LPF_5HZ
+    afb[i][0] = 0.00146*aff[i][0] + 0.00292*aff[i][1] + 0.00146*aff[i][2]
+                                  + 1.88909*afb[i][1] - 0.89493*afb[i][2];
+#endif // ACC_LPF_5HZ
 #endif // ACC_LPF_15HZ
 #endif // ACC_LPF_25HZ
 #endif // ACC_LPF_50HZ
@@ -240,7 +245,7 @@ void ComplementaryFilter(State* s) {
 // Estimate the real attitude based
 //
 //*****************************************************************************
-void AttitudeEstimation(float * pitch, float * pitchRate, float * roll, float * rollRate, float * yaw, float * altitude) {
+void AttitudeEstimation(float * pitch, float * pitchRate, float * roll, float * rollRate, float * yaw, float * yawRate, float * altitude) {
   // calculate observed angles and rates
   state[0].z.angle  = rad2deg(atan2(accValue[0] , accValue[2]));
   state[0].z.rate   = gyroValue[0];
@@ -260,12 +265,13 @@ void AttitudeEstimation(float * pitch, float * pitchRate, float * roll, float * 
 
   // get predicted angles and rates
   *pitch = state[0].x.angle;
-  *pitchRate = state[0].x.rate;
+  *pitchRate = state[0].z.rate;
   *roll  = state[1].x.angle;
-  *rollRate = state[1].x.rate;
+  *rollRate = state[1].z.rate;
 
   // calculate the heading
   *yaw = rad2deg(atan2(magValue[1], magValue[0]));
+  *yawRate = gyroValue[2];
   //if(*yaw < 0)
   //  *yaw += 360;
 

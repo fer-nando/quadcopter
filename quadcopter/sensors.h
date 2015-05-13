@@ -22,16 +22,17 @@ enum rc {
 #define USE_LPF
   //#define ACC_LPF_50HZ
   //#define ACC_LPF_25HZ
-  #define ACC_LPF_15HZ
+  //#define ACC_LPF_15HZ
+  #define ACC_LPF_5HZ
   //#define GYRO_LPF_100HZ
   #define GYRO_LPF_50HZ
   //#define GYRO_LPF_25HZ
 
 // Kalman filter
 #define KALMAN_FILTER
-  #define ACC_STD       80
+  #define ACC_STD       30
   #define GYRO_STD      5.21
-  #define PROCESS_STD   0.30
+  #define PROCESS_STD   0.20
 
   #define ACC_VAR       (ACC_STD*ACC_STD)
   #define GYRO_VAR      (GYRO_STD*GYRO_STD)
@@ -73,6 +74,6 @@ void SensorsGetCalibration(int * accZero, int * magZero);
 void KalmanInit();
 void KalmanFilter(State* s);
 void ComplementaryFilter(State* s);
-void AttitudeEstimation(float * roll, float * rollRate, float * pitch, float * pitchRate, float * yaw, float * altitude);
+void AttitudeEstimation(float * roll, float * rollRate, float * pitch, float * pitchRate, float * yaw, float * yawRate, float * altitude);
 
 #endif
