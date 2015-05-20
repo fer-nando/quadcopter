@@ -85,6 +85,8 @@ float mtr[4];
 float lastError[PIDCONTROLS], errorSum[PIDCONTROLS];
 
 tBoolean armed = false;
+unsigned int rcLostCounter = 0;
+tBoolean rcLost = false;
 
 char str[8][10];
 
@@ -602,7 +604,7 @@ void main(void) {
       rf_state = RF_LISTENING;
     }
 
-    if (rf24Available()) {
+    if (rf_state == RF_LISTENING && rf24Available()) {
       ReceivePID();
     }
 
@@ -616,7 +618,28 @@ void main(void) {
     }
 
     if (currentTime - rcTime >= MOTOR_TIME_US) {
-      RCGetValues(rc);
+
+      if (RCGetValues(rc)) {
+        rcLostCounter = 0;
+      } else{
+        rcLostCounter += 1;
+        if (rcLostCounter > 20) {
+          rcLost = true;
+          ledOn(GREEN_LED);
+        }
+      }
+
+      if (rcLost) {
+        if (rcLostCounter == 0) {
+          armed = false;
+          MotorSetMicroseconds(1000);
+          rcLost = false;
+          ledOff(GREEN_LED);
+          ledOff(BLUE_LED);
+        } else {
+          rc[THROTTLE] = max(0,rc[THROTTLE]-(int)(rcLostCounter>>3));
+        }
+      }
 
       if (rc[THROTTLE] < 1200) {
         if (rc[YAW] < 1200) {  // disarm command
@@ -635,17 +658,19 @@ void main(void) {
       if (armed) {
         AttitudeControl();
         MotorSetDutyCycle(mtr);
-#ifdef RADIO_LOG
-        if (rf_state != RF_SENDING && currentTime - uartTime >= LOG_TIME_US) {
-          //SendState();
-          SendRawData();
-          rf_state = RF_SENDING;
-          uartTime = currentTime;
-        }
-#endif
       }
       rcTime = currentTime;
     }
+
+
+#ifdef RADIO_LOG
+    if (rf_state != RF_SENDING && currentTime - uartTime >= LOG_TIME_US) {
+      //SendState();
+      SendRawData();
+      rf_state = RF_SENDING;
+      uartTime = currentTime;
+    }
+#endif
 
 #ifdef SERIAL_DEBUG
     if (currentTime - uartTime >= 500000) { // 5 Hz

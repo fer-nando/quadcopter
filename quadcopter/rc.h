@@ -8,10 +8,11 @@
 #ifndef RC_H_
 #define RC_H_
 
+#include "inc/hw_types.h"
 
 // functions
 void RCInit();
-void RCGetValues(int * rc);
+tBoolean RCGetValues(int * rc);
 void RCLowPassFilter(int num);
 
 

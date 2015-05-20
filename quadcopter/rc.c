@@ -66,15 +66,18 @@ void RCLowPassFilter(int num) {
 //
 //
 //*****************************************************************************
-void RCGetValues(int * rc) {
+tBoolean RCGetValues(int * rc) {
+  tBoolean updated = false;
   int i;
   for (i = 0; i < 4; i++) {
     if (rcUpdated[i]) {
       rcUpdated[i] = false;
       RCLowPassFilter(i);
+      updated = true;
     }
     rc[i] = rcValue[i];
   }
+  return updated;
 }
 
 
