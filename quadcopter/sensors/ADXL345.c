@@ -82,12 +82,9 @@ void ADXL345_GetCalibration(int * zero) {
 //
 //
 //*****************************************************************************
-float ADXL345_Calibrate() {
+void ADXL345_Calibrate() {
   int i;
   int accSum[3] = { 0, 0, 0 };
-  float accVar;
-  float accValue[3];
-  float accVarSum[3] = { 0, 0, 0 };
 
   for (i = 0; i < 100; i++) {
     ADXL345_ReadADC();
@@ -100,17 +97,6 @@ float ADXL345_Calibrate() {
   accZero[0] = accSum[0] / 100;
   accZero[1] = accSum[1] / 100;
   accZero[2] = accSum[2] / 100 - (int) (1.0 / (float) ACC_SCALE);
-
-  for (i = 0; i < 100; i++) {
-    ADXL345_Update(accValue);
-    accVarSum[0] += (accValue[0]*accValue[0]);
-    accVarSum[1] += (accValue[1]*accValue[1]);
-    accVarSum[2] += (accValue[2]*accValue[2]);
-    DelayUs(2500);
-  }
-
-  accVar = (accVarSum[0] / 100) + (accVarSum[1] / 100) + (accVarSum[2] / 100) / 3.0;
-  return accVar;
 }
 
 //*****************************************************************************

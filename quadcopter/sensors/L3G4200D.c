@@ -52,12 +52,9 @@ void L3G4200D_ReadADC() {
 //
 //
 //*****************************************************************************
-float L3G4200D_Calibrate() {
+void L3G4200D_Calibrate() {
   int i;
   int gyroSum[3] = {0,0,0};
-  float gyroVar;
-  float gyroValue[3];
-  float gyroVarSum[3] = { 0, 0, 0 };
 
   for (i = 0; i < 100; i++) {
     L3G4200D_ReadADC();
@@ -70,17 +67,6 @@ float L3G4200D_Calibrate() {
   gyroZero[0] = gyroSum[0] / 100;
   gyroZero[1] = gyroSum[1] / 100;
   gyroZero[2] = gyroSum[2] / 100;
-
-  for (i = 0; i < 100; i++) {
-    L3G4200D_Update(gyroValue);
-    gyroVarSum[0] += (gyroValue[0]*gyroValue[0]);
-    gyroVarSum[1] += (gyroValue[1]*gyroValue[1]);
-    gyroVarSum[2] += (gyroValue[2]*gyroValue[2]);
-    DelayUs(2500);
-  }
-
-  gyroVar = (gyroVarSum[0] / 100) + (gyroVarSum[1] / 100) + (gyroVarSum[2] / 100) / 3.0;
-  return gyroVar;
 }
 
 //*****************************************************************************

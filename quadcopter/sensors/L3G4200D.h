@@ -51,7 +51,7 @@
 
 // functions
 void L3G4200D_Init();
-float L3G4200D_Calibrate();
+void L3G4200D_Calibrate();
 void L3G4200D_Update(float * gyroValue);
 
 #endif /* L3G4300D_H_ */

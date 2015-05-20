@@ -53,7 +53,7 @@
 void ADXL345_Init();
 void ADXL345_SetCalibration(int * zero);
 void ADXL345_GetCalibration(int * zero);
-float ADXL345_Calibrate();
+void ADXL345_Calibrate();
 void ADXL345_Update(float * accValue);
 
 #endif /* ADXL345_H_ */
