@@ -138,9 +138,9 @@ int CalculateChecksum(uint32_t * p, int size) {
 void LoadDefaults() {
   config.defaults = true;
 
-  config.Kp[PIDROLL]  = 0.45;  config.Ki[PIDROLL]  = 0.0010;  config.Kd[PIDROLL]  = 0.20;
-  config.Kp[PIDPITCH] = 0.45;  config.Ki[PIDPITCH] = 0.0010;  config.Kd[PIDPITCH] = 0.20;
-  config.Kp[PIDYAW]   = 0.45;  config.Ki[PIDYAW]   = 0.0010;  config.Kd[PIDYAW]   = 0.00;
+  config.Kp[PIDROLL]  = 0.35;  config.Ki[PIDROLL]  = 0.0010;  config.Kd[PIDROLL]  = 0.20;
+  config.Kp[PIDPITCH] = 0.35;  config.Ki[PIDPITCH] = 0.0010;  config.Kd[PIDPITCH] = 0.20;
+  config.Kp[PIDYAW]   = 1.00;  config.Ki[PIDYAW]   = 0.0010;  config.Kd[PIDYAW]   = 0.00;
   config.Kp[PIDALT]   = 0.00;  config.Ki[PIDALT]   = 0.0000;  config.Kd[PIDALT]   = 0.00;
 
   config.accZero[0] = 0;  config.accZero[1] = 0;  config.accZero[2] = 0;
@@ -260,10 +260,10 @@ void AttitudeControl() {
     mtr[1] = throttle + pid[PIDPITCH] - pid[PIDROLL] - pid[PIDYAW];
     mtr[2] = throttle - pid[PIDPITCH] - pid[PIDROLL] + pid[PIDYAW];
     mtr[3] = throttle*0.95 - pid[PIDPITCH] + pid[PIDROLL] - pid[PIDYAW];
-    //mtr[0] = throttle + pid[PIDPITCH];
-    //mtr[1] = throttle - pid[PIDROLL];
+    //mtr[0] = throttle*0.98 + pid[PIDPITCH];
+    //mtr[1] = throttle + pid[PIDPITCH];
     //mtr[2] = throttle - pid[PIDPITCH];
-    //mtr[3] = throttle + pid[PIDROLL];
+    //mtr[3] = throttle*0.95 - pid[PIDPITCH];
     //mtr[0] *= 0.98;
     //mtr[1] *= 1.00;
     //mtr[2] *= 1.00;
@@ -637,7 +637,7 @@ void main(void) {
           ledOff(GREEN_LED);
           ledOff(BLUE_LED);
         } else {
-          rc[THROTTLE] = max(0,rc[THROTTLE]-(int)(rcLostCounter>>3));
+          rc[THROTTLE] = max(1000,rc[THROTTLE]-(int)(rcLostCounter>>3));
         }
       }
 

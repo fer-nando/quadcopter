@@ -23,6 +23,7 @@ enum rc {
   //#define ACC_LPF_50HZ
   //#define ACC_LPF_25HZ
   //#define ACC_LPF_15HZ
+  //#define ACC_LPF_10HZ
   #define ACC_LPF_5HZ
   //#define GYRO_LPF_100HZ
   #define GYRO_LPF_50HZ
@@ -30,8 +31,8 @@ enum rc {
 
 // Kalman filter
 #define KALMAN_FILTER
-  #define ACC_STD       30
-  #define GYRO_STD      5.21
+  #define ACC_STD       40
+  #define GYRO_STD      5.38
   #define PROCESS_STD   0.20
 
   #define ACC_VAR       (ACC_STD*ACC_STD)

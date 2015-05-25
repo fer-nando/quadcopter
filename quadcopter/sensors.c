@@ -21,7 +21,6 @@
 uint8_t   rawADC[6];
 float     pressure, temperature;
 float     gyroValue[3], accValue[3], magValue[3];
-float     gyroVar, accVar;
 State     state[2];
 
 #ifdef USE_LPF
@@ -42,9 +41,9 @@ void SensorsInit(int flags) {
   HMC5883_Init();
 
   if (flags & ACC_CALIBRATE)
-    accVar  = ADXL345_Calibrate();
+    ADXL345_Calibrate();
   if (flags & GYRO_CALIBRATE)
-    gyroVar = L3G4200D_Calibrate();
+    L3G4200D_Calibrate();
   if (flags & MAG_CALIBRATE)
     HMC5883_Calibrate();
 
@@ -89,10 +88,15 @@ void SensorsLowPassFilter() {
     afb[i][0] = 0.01176*aff[i][0] + 0.02351*aff[i][1] + 0.01176*aff[i][2]
                                   + 1.67070*afb[i][1] - 0.71773*afb[i][2];
 #else // ACC_LPF != 15HZ
+#ifdef ACC_LPF_10HZ
+    afb[i][0] = 0.00552*aff[i][0] + 0.01104*aff[i][1] + 0.00552*aff[i][2]
+                                  + 1.77908*afb[i][1] - 0.80117*afb[i][2];
+#else // ACC_LPF != 10HZ
 #ifdef ACC_LPF_5HZ
     afb[i][0] = 0.00146*aff[i][0] + 0.00292*aff[i][1] + 0.00146*aff[i][2]
                                   + 1.88909*afb[i][1] - 0.89493*afb[i][2];
 #endif // ACC_LPF_5HZ
+#endif // ACC_LPF_10HZ
 #endif // ACC_LPF_15HZ
 #endif // ACC_LPF_25HZ
 #endif // ACC_LPF_50HZ
@@ -234,7 +238,8 @@ void KalmanFilter(State* s) {
 //*****************************************************************************
 #ifdef COMPLEMENTARY_FILTER
 void ComplementaryFilter(State* s) {
-  const float a = TAU/(TAU+SAMPLE_TIME);
+  //const float a = TAU/(TAU+SAMPLE_TIME);
+  const float a = 0.995;
   s->x.angle = a*(s->x.angle + s->z.rate*s->dt) + (1-a)*(s->z.angle);
   s->x.rate  = s->z.rate;
 }
